@@ -16,9 +16,11 @@ This project uses the Kaggle dataset:
 
 The dataset includes match-level features captured around the first ~10 minutes (e.g., gold, objectives, kills, etc.) and a binary target indicating whether the Blue team won.
 
-## What you’ll find in this repo
+## What you'll find in this repo
 ```
 .
+├── data/
+│   └── raw/          # Raw dataset files (CSV from Kaggle)
 ├── notebooks/
 │   ├── 01_eda.ipynb
 │   ├── 02_modeling.ipynb
@@ -32,7 +34,7 @@ The dataset includes match-level features captured around the first ~10 minutes 
 │   └── viz.py
 ├── reports/
 │   ├── model_card.md
-│   └── insights_report.pdf
+│   └── insights_report.pdf  # Optional - insights available in notebooks
 ├── assets/
 │   └── figures/
 ├── requirements.txt
@@ -100,21 +102,40 @@ Notebook(s) showing:
 - Calibration choice and plots
 - SHAP explanations and slices
 
-### Insights report (PDF)
+### Insights report (PDF) - Optional
 A short report in `reports/insights_report.pdf` with:
 - What early signals most influence win probability
 - How win probability changes with common early advantages
 - Recommendations framed as gameplay priorities (with caveats)
 
+*Note: The insights are currently available in the notebooks and model card. A PDF report can be generated if needed.*
+
 ## Quickstart
 ### 1) Create environment
 ```bash
-python -m venv .venv
-source .venv/bin/activate  # Windows: .venv\Scripts\activate
+conda create -n gsd-lol python=3.9
+conda activate gsd-lol
 pip install -r requirements.txt
 ```
 
-### 2) Download data
+### 2) Configure Kaggle API credentials
+To use the Kaggle CLI, you need to set up your API credentials:
+
+1. Go to your Kaggle account: https://www.kaggle.com/account
+2. Scroll down to the "API" section and click "Create New Token"
+3. This will download a `kaggle.json` file containing your username and API key
+4. Place the `kaggle.json` file in the appropriate location:
+   - **Windows**: `C:\Users\<YourUsername>\.kaggle\kaggle.json`
+   - **Linux/Mac**: `~/.kaggle/kaggle.json`
+
+   Create the `.kaggle` folder if it doesn't exist.
+
+5. Set proper permissions (Linux/Mac only):
+   ```bash
+   chmod 600 ~/.kaggle/kaggle.json
+   ```
+
+### 3) Download data
 Option A (recommended): Use Kaggle CLI:
 ```bash
 kaggle datasets download -d bobbyscience/league-of-legends-diamond-ranked-games-10-min -p data/raw --unzip
@@ -125,7 +146,7 @@ Option B: Download manually from Kaggle and place the raw CSV in:
 data/raw/
 ```
 
-### 3) Run notebooks
+### 4) Run notebooks
 Start with:
 - `notebooks/01_eda.ipynb`
 - `notebooks/02_modeling.ipynb`
@@ -138,14 +159,33 @@ This project is careful about:
 - Ensuring derived features are built from early-game fields only
 - Keeping evaluation honest (calibration on held-out data)
 
-## Results (to be filled after training)
-This section is intentionally left blank until the model is trained and the final calibrated model is selected.
+## Results
 
-- Best model:
-- ROC-AUC:
-- Brier score:
-- Calibration method:
-- Top drivers (global):
+After training and evaluation, the following results were obtained:
+
+- **Best model:** Logistic Regression with Platt Scaling (sigmoid) calibration
+- **ROC-AUC:** 0.8058
+- **Brier score:** 0.1798
+- **Calibration method:** Platt Scaling (sigmoid)
+- **Expected Calibration Error (ECE):** 0.0225
+- **Top drivers (global):**
+  1. Gold differences (blueGoldDiff, redGoldDiff)
+  2. Total gold (blueTotalGold, redTotalGold)
+  3. Gold per minute (blueGoldPerMin, redGoldPerMin)
+  4. Total experience (redTotalExperience)
+  5. Experience differences (blueExperienceDiff, redExperienceDiff)
+  6. Objectives (blueDragons, blueDragonAdvantage)
+
+**Key Findings:**
+- The model achieves good discrimination (ROC-AUC > 0.80) and is well-calibrated (ECE < 0.03)
+- Economic factors (gold, experience) are the strongest predictors of win probability
+- Early game resource accumulation is critical for win prediction
+- Advantage features (Blue - Red deltas) are highly informative
+
+For detailed metrics, calibration analysis, and interpretability results, see:
+- `reports/model_card.md` - Complete model documentation
+- `notebooks/03_calibration_and_thresholds.ipynb` - Calibration analysis
+- `notebooks/04_explanations_shap.ipynb` - SHAP explanations
 
 ## License and attribution
 - Dataset is provided by Kaggle and is subject to Kaggle’s dataset terms.
